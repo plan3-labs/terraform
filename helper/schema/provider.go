@@ -196,3 +196,12 @@ func (p *Provider) Resources() []terraform.ResourceType {
 
 	return result
 }
+
+func (p *Provider) InitialInstanceState(resourceType string, config *terraform.ResourceConfig) (*terraform.InstanceState, error) {
+	r, ok := p.ResourcesMap[resourceType]
+	if !ok {
+		return nil, fmt.Errorf("unknown resource type: %s", resourceType)
+	}
+
+	return r.InitialInstanceState(config, p.meta)
+}

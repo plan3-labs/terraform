@@ -996,12 +996,24 @@ func (c *walkContext) planDestroyWalkFn() depgraph.WalkFunc {
 
 func (c *walkContext) refreshWalkFn() depgraph.WalkFunc {
 	cb := func(c *walkContext, r *Resource) error {
-		is := r.State
 
-		if is == nil || is.ID == "" {
-			log.Printf("[DEBUG] %s: Not refreshing, ID is empty", r.Id)
-			return nil
+		if r.State == nil || r.State.ID == "" {
+			if c.Context.state == nil {
+				c.Context.state = &State{}
+			}
+			err := r.Config.interpolate(c, r)
+			if err != nil {
+				return err
+			}
+			state, err := r.Provider.InitialInstanceState(r.Info.Type, r.Config)
+			if err != nil {
+				log.Printf("[DEBUG] Couldn't resolve id of %v because of error: %v", r.Config, err)
+				return nil
+			}
+			r.State = state
 		}
+
+		is := r.State
 
 		for _, h := range c.Context.hooks {
 			handleHook(h.PreRefresh(r.Info, is))
@@ -1313,7 +1325,6 @@ func (c *walkContext) genericWalkFn(cb genericWalkFunc) depgraph.WalkFunc {
 			rn.Resource.Id,
 			n.Name)
 		if err := cb(c, rn.Resource); err != nil {
-			log.Printf("[ERROR] Error walking '%s': %s", rn.Resource.Id, err)
 			return err
 		}
 

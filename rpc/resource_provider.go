@@ -174,6 +174,19 @@ func (p *ResourceProvider) Resources() []terraform.ResourceType {
 	return result
 }
 
+func (p *ResourceProvider) InitialInstanceState(resourceType string, config *terraform.ResourceConfig) (*terraform.InstanceState, error) {
+	var result ResourceProviderInitialInstanceStateResponse
+	args := &ResourceProviderInitialInstanceStateArgs{Type: resourceType, Config: config}
+	err := p.Client.Call(p.Name+".InitialInstanceState", &args, &result)
+	if err != nil {
+		return nil, err
+	}
+	if result.Error != nil {
+		err = result.Error
+	}
+	return result.State, err
+}
+
 // ResourceProviderServer is a net/rpc compatible structure for serving
 // a ResourceProvider. This should not be used directly.
 type ResourceProviderServer struct {
@@ -244,6 +257,16 @@ type ResourceProviderValidateResourceArgs struct {
 type ResourceProviderValidateResourceResponse struct {
 	Warnings []string
 	Errors   []*BasicError
+}
+
+type ResourceProviderInitialInstanceStateArgs struct {
+	Type   string
+	Config *terraform.ResourceConfig
+}
+
+type ResourceProviderInitialInstanceStateResponse struct {
+	State *terraform.InstanceState
+	Error *BasicError
 }
 
 func (s *ResourceProviderServer) Input(
@@ -350,5 +373,16 @@ func (s *ResourceProviderServer) Resources(
 	nothing interface{},
 	result *[]terraform.ResourceType) error {
 	*result = s.Provider.Resources()
+	return nil
+}
+
+func (s *ResourceProviderServer) InitialInstanceState(
+	args *ResourceProviderInitialInstanceStateArgs,
+	result *ResourceProviderInitialInstanceStateResponse) error {
+	state, err := s.Provider.InitialInstanceState(args.Type, args.Config)
+	*result = ResourceProviderInitialInstanceStateResponse{
+		State: state,
+		Error: NewBasicError(err),
+	}
 	return nil
 }
