@@ -41,10 +41,11 @@ type Resource struct {
 	// If any errors occur during each of the operation, an error should be
 	// returned. If a resource was partially updated, be careful to enable
 	// partial state mode for ResourceData and use it accordingly.
-	Create CreateFunc
-	Read   ReadFunc
-	Update UpdateFunc
-	Delete DeleteFunc
+	Create                     CreateFunc
+	Read                       ReadFunc
+	Update                     UpdateFunc
+	Delete                     DeleteFunc
+	CreateInitialInstanceState CreateInitialInstanceStateFunc
 }
 
 // See Resource documentation.
@@ -58,6 +59,9 @@ type UpdateFunc func(*ResourceData, interface{}) error
 
 // See Resource documentation.
 type DeleteFunc func(*ResourceData, interface{}) error
+
+// See Resource documentation
+type CreateInitialInstanceStateFunc func(*terraform.ResourceConfig, interface{}) (*terraform.InstanceState, error)
 
 // Apply creates, updates, and/or deletes a resource.
 func (r *Resource) Apply(
@@ -161,4 +165,11 @@ func (r *Resource) InternalValidate() error {
 	}
 
 	return schemaMap(r.Schema).InternalValidate()
+}
+
+func (r *Resource) InitialInstanceState(config *terraform.ResourceConfig, meta interface{}) (*terraform.InstanceState, error) {
+	if r.CreateInitialInstanceState != nil {
+		return r.CreateInitialInstanceState(config, meta)
+	}
+	return &terraform.InstanceState{}, nil
 }
