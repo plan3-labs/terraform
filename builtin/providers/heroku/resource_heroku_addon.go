@@ -8,6 +8,7 @@ import (
 
 	"github.com/cyberdelia/heroku-go/v3"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 // Global lock to prevent parallelism for heroku_addon since
@@ -21,6 +22,7 @@ func resourceHerokuAddon() *schema.Resource {
 		Read:   resourceHerokuAddonRead,
 		Update: resourceHerokuAddonUpdate,
 		Delete: resourceHerokuAddonDelete,
+		CreateInitialInstanceState: resourceHerokuAddonResolveId,
 
 		Schema: map[string]*schema.Schema{
 			"app": &schema.Schema{
@@ -117,6 +119,27 @@ func resourceHerokuAddonRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("config_vars", []interface{}{addon.ConfigVars})
 
 	return nil
+}
+
+func resourceHerokuAddonResolveId(c *terraform.ResourceConfig, meta interface{}) (*terraform.InstanceState, error) {
+	client := meta.(*heroku.Service)
+
+	app, _ := c.Get("app")
+	plan, _ := c.Get("plan")
+	log.Printf("App is %s, plan is %s", app.(string), plan.(string))
+	addonName := strings.Split(plan.(string), ":")[0]
+
+	addon, err := client.AddonInfo(app.(string), addonName)
+	if err != nil {
+		return nil, err
+	}
+
+	state := &terraform.InstanceState{}
+	state.Attributes = make(map[string]string)
+	state.ID = addon.ID
+	state.Attributes["app"] = app.(string)
+
+	return state, err
 }
 
 func resourceHerokuAddonUpdate(d *schema.ResourceData, meta interface{}) error {
