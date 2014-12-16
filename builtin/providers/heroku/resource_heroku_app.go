@@ -7,6 +7,7 @@ import (
 	"github.com/cyberdelia/heroku-go/v3"
 	"github.com/hashicorp/terraform/helper/multierror"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 // type application is used to store all the details of a heroku app
@@ -46,6 +47,7 @@ func resourceHerokuApp() *schema.Resource {
 		Read:   resourceHerokuAppRead,
 		Update: resourceHerokuAppUpdate,
 		Delete: resourceHerokuAppDelete,
+		CreateInitialInstanceState: resourceHerokuAppCreateInitialInstanceState,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -312,6 +314,17 @@ func resourceHerokuAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return resourceHerokuAppRead(d, meta)
+}
+
+func resourceHerokuAppCreateInitialInstanceState(config *terraform.ResourceConfig, state *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
+	client := meta.(*heroku.Service)
+	name, _ := config.Get("name")
+    _, err := resourceHerokuAppRetrieve(name.(string), client)
+    if err != nil {
+        return nil, err
+    }
+    state.ID = name.(string)
+	return state, nil
 }
 
 func resourceHerokuAppDelete(d *schema.ResourceData, meta interface{}) error {
