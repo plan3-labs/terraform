@@ -6,6 +6,7 @@ import (
 
 	"github.com/cyberdelia/heroku-go/v3"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 func resourceHerokuCert() *schema.Resource {
@@ -14,6 +15,7 @@ func resourceHerokuCert() *schema.Resource {
 		Read:   resourceHerokuCertRead,
 		Update: resourceHerokuCertUpdate,
 		Delete: resourceHerokuCertDelete,
+        CreateInitialInstanceState: resourceHerokuCreateInitialInstanceState,
 
 		Schema: map[string]*schema.Schema{
 			"app": &schema.Schema{
@@ -131,4 +133,27 @@ func resourceHerokuSSLCertRetrieve(app string, id string, client *heroku.Service
 	}
 
 	return addon, nil
+}
+
+func resourceHerokuCreateInitialInstanceState(config* terraform.ResourceConfig, state *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
+	client := meta.(*heroku.Service)
+    app, _ := config.Get("app")
+    certificateChain, _ := config.Get("certificate_chain")
+
+    // We can't check for a certificate under given name, so we list and find the existing one instead.
+    // Fortunatelly currently one certificate per application is supported.
+    certs, err := client.SSLEndpointList(app.(string), nil)
+    if err != nil {
+        return nil, err
+    }
+
+    for i := range certs {
+        if certs[i].CertificateChain == certificateChain.(string) {
+            state.ID = certs[i].ID
+            state.Attributes["app"] = app.(string)
+            return state, nil
+        }
+    }
+
+    return nil, nil
 }
