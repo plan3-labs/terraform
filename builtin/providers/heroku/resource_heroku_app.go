@@ -371,12 +371,21 @@ func resourceHerokuAppUpdate(d *schema.ResourceData, meta interface{}) error {
 
 func resourceHerokuAppCreateInitialInstanceState(config *terraform.ResourceConfig, state *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
 	client := meta.(*heroku.Service)
+
 	name, _ := config.Get("name")
-    _, err := resourceHerokuAppRetrieve(name.(string), client)
+    organizationMapV, organizationApp := config.Get("organization")
+    _, err := resourceHerokuAppRetrieve(name.(string), organizationApp, client)
     if err != nil {
         return nil, err
     }
     state.ID = name.(string)
+    if organizationApp {
+        organizationMap := organizationMapV.([]map[string]interface{})[0]
+        state.Attributes["organization.#"] = "1"
+        state.Attributes["organization.1.name"] = organizationMap["name"].(string)
+        state.Attributes["organization.1.locked"] = fmt.Sprintf("%v", organizationMap["locked"].(bool))
+        state.Attributes["organization.1.private"] = fmt.Sprintf("%v", false)
+    }
 	return state, nil
 }
 
