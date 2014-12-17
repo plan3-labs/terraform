@@ -71,7 +71,7 @@ type DeleteFunc func(*ResourceData, interface{}) error
 type ExistsFunc func(*ResourceData, interface{}) (bool, error)
 
 // See Resource documentation
-type CreateInitialInstanceStateFunc func(*terraform.ResourceConfig, interface{}) (*terraform.InstanceState, error)
+type CreateInitialInstanceStateFunc func(*terraform.ResourceConfig, *terraform.InstanceState, interface{}) (*terraform.InstanceState, error)
 
 // Apply creates, updates, and/or deletes a resource.
 func (r *Resource) Apply(
@@ -194,9 +194,9 @@ func (r *Resource) InternalValidate() error {
 	return schemaMap(r.Schema).InternalValidate()
 }
 
-func (r *Resource) InitialInstanceState(config *terraform.ResourceConfig, meta interface{}) (*terraform.InstanceState, error) {
+func (r *Resource) InitialInstanceState(config *terraform.ResourceConfig, state *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
 	if r.CreateInitialInstanceState != nil {
-		return r.CreateInitialInstanceState(config, meta)
+		return r.CreateInitialInstanceState(config, state, meta)
 	}
 	return &terraform.InstanceState{}, nil
 }
