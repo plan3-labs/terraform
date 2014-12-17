@@ -6,6 +6,7 @@ import (
 
 	"github.com/cyberdelia/heroku-go/v3"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 func resourceHerokuDomain() *schema.Resource {
@@ -13,6 +14,7 @@ func resourceHerokuDomain() *schema.Resource {
 		Create: resourceHerokuDomainCreate,
 		Read:   resourceHerokuDomainRead,
 		Delete: resourceHerokuDomainDelete,
+        CreateInitialInstanceState: resourceHerokuDomainCreateInitialInstanceState,
 
 		Schema: map[string]*schema.Schema{
 			"hostname": &schema.Schema{
@@ -83,4 +85,25 @@ func resourceHerokuDomainRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("cname", fmt.Sprintf("%s.herokuapp.com", app))
 
 	return nil
+}
+
+func resourceHerokuDomainCreateInitialInstanceState(
+        config *terraform.ResourceConfig,
+        state *terraform.InstanceState,
+        meta interface{}) (*terraform.InstanceState, error) {
+	client := meta.(*heroku.Service)
+
+    app, _ := config.Get("app")
+    hostname, _ := config.Get("hostname")
+
+    domain, err := client.DomainInfo(app.(string), hostname.(string))
+
+    if err != nil {
+        return nil, err
+    }
+
+    state.ID = domain.ID
+    state.Attributes["app"] = app.(string)
+
+    return state, nil
 }
