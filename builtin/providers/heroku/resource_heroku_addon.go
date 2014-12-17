@@ -72,7 +72,9 @@ func resourceHerokuAddonCreate(d *schema.ResourceData, meta interface{}) error {
 		config := make(map[string]string)
 		for _, v := range v.([]interface{}) {
 			for k, v := range v.(map[string]interface{}) {
-				config[k] = v.(string)
+                if k != "#" { // for some reason the number of elements pops up here
+                    config[k] = v.(string)
+                }
 			}
 		}
 
