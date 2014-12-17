@@ -1015,7 +1015,7 @@ func (c *walkContext) refreshWalkFn() depgraph.WalkFunc {
 				log.Printf("[DEBUG] Couldn't resolve initial state of %v because of error: %v", r.Config, err)
 				return nil
 			}
-            if state.ID == "" {
+            if state == nil || state.ID == "" {
                 log.Printf("[DEBUG] Provider returned no initial state - so there is no existing resource for sure")
                 return nil
             }
