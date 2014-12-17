@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+    "runtime/debug"
 
 	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/config/module"
@@ -997,18 +998,26 @@ func (c *walkContext) refreshWalkFn() depgraph.WalkFunc {
 	cb := func(c *walkContext, r *Resource) error {
 
 		if r.State == nil || r.State.ID == "" {
+            // TODO - move this init to a better place (root of refresh walk would be the best)
 			if c.Context.state == nil {
+                debug.PrintStack()
 				c.Context.state = &State{}
 			}
 			err := r.Config.interpolate(c, r)
 			if err != nil {
 				return err
 			}
-			state, err := r.Provider.InitialInstanceState(r.Info.Type, r.Config)
+            state := &InstanceState{}
+            state.init()
+			state, err = r.Provider.InitialInstanceState(r.Info, state, r.Config)
 			if err != nil {
-				log.Printf("[DEBUG] Couldn't resolve id of %v because of error: %v", r.Config, err)
+				log.Printf("[DEBUG] Couldn't resolve initial state of %v because of error: %v", r.Config, err)
 				return nil
 			}
+            if state.ID == "" {
+                log.Printf("[DEBUG] Provider returned no initial state - so there is no existing resource for sure")
+                return nil
+            }
 			r.State = state
 		}
 

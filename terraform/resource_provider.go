@@ -72,7 +72,7 @@ type ResourceProvider interface {
 
 	// Try resolve id from config if possible (the resource is unique, and can be
 	// existing even if we don't know about it).
-	InitialInstanceState(string, *ResourceConfig) (*InstanceState, error)
+	InitialInstanceState(*InstanceInfo, *InstanceState, *ResourceConfig) (*InstanceState, error)
 }
 
 // ResourceType is a type of resource that a resource provider can manage.

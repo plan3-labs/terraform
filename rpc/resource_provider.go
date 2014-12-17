@@ -174,9 +174,12 @@ func (p *ResourceProvider) Resources() []terraform.ResourceType {
 	return result
 }
 
-func (p *ResourceProvider) InitialInstanceState(resourceType string, config *terraform.ResourceConfig) (*terraform.InstanceState, error) {
+func (p *ResourceProvider) InitialInstanceState(
+        info *terraform.InstanceInfo,
+        state *terraform.InstanceState,
+        config *terraform.ResourceConfig) (*terraform.InstanceState, error) {
 	var result ResourceProviderInitialInstanceStateResponse
-	args := &ResourceProviderInitialInstanceStateArgs{Type: resourceType, Config: config}
+	args := &ResourceProviderInitialInstanceStateArgs{Info: info, State: state, Config: config}
 	err := p.Client.Call(p.Name+".InitialInstanceState", &args, &result)
 	if err != nil {
 		return nil, err
@@ -260,7 +263,8 @@ type ResourceProviderValidateResourceResponse struct {
 }
 
 type ResourceProviderInitialInstanceStateArgs struct {
-	Type   string
+	Info   *terraform.InstanceInfo
+    State  *terraform.InstanceState
 	Config *terraform.ResourceConfig
 }
 
@@ -377,9 +381,9 @@ func (s *ResourceProviderServer) Resources(
 }
 
 func (s *ResourceProviderServer) InitialInstanceState(
-	args *ResourceProviderInitialInstanceStateArgs,
-	result *ResourceProviderInitialInstanceStateResponse) error {
-	state, err := s.Provider.InitialInstanceState(args.Type, args.Config)
+        args *ResourceProviderInitialInstanceStateArgs, 
+        result *ResourceProviderInitialInstanceStateResponse) error {
+	state, err := s.Provider.InitialInstanceState(args.Info, args.State, args.Config)
 	*result = ResourceProviderInitialInstanceStateResponse{
 		State: state,
 		Error: NewBasicError(err),
