@@ -162,3 +162,4 @@ func resourceHerokuAddonRetrieve(app string, id string, client *heroku.Service) 
 
 	return addon, nil
 }
+

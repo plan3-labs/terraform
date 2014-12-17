@@ -3,9 +3,11 @@ package heroku
 import (
 	"fmt"
 	"log"
+	"net/url"
 
 	"github.com/cyberdelia/heroku-go/v3"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 func resourceHerokuDrain() *schema.Resource {
@@ -13,6 +15,7 @@ func resourceHerokuDrain() *schema.Resource {
 		Create: resourceHerokuDrainCreate,
 		Read:   resourceHerokuDrainRead,
 		Delete: resourceHerokuDrainDelete,
+		CreateInitialInstanceState: resourceHerokuDrainCreateInitialInstanceState,
 
 		Schema: map[string]*schema.Schema{
 			"url": &schema.Schema{
@@ -82,4 +85,28 @@ func resourceHerokuDrainRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("token", dr.Token)
 
 	return nil
+}
+
+func escapeUrl(theUrl string) string {
+	params := url.Values{}
+	params.Add("u", theUrl)
+	return params.Encode()[2:]
+}
+
+func resourceHerokuDrainCreateInitialInstanceState(
+	config *terraform.ResourceConfig,
+	state *terraform.InstanceState,
+	meta interface{}) (*terraform.InstanceState, error) {
+	client := meta.(*heroku.Service)
+
+	app, _ := config.Get("app")
+	drainUrl, _ := config.Get("url")
+	dr, err := client.LogDrainInfo(app.(string), escapeUrl(drainUrl.(string)))
+	if err != nil {
+		return nil, err
+	}
+
+	state.ID = dr.ID
+
+	return state, nil
 }
