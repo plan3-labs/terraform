@@ -382,9 +382,9 @@ func resourceHerokuAppCreateInitialInstanceState(config *terraform.ResourceConfi
     if organizationApp {
         organizationMap := organizationMapV.([]map[string]interface{})[0]
         state.Attributes["organization.#"] = "1"
-        state.Attributes["organization.1.name"] = organizationMap["name"].(string)
-        state.Attributes["organization.1.locked"] = fmt.Sprintf("%v", organizationMap["locked"].(bool))
-        state.Attributes["organization.1.private"] = fmt.Sprintf("%v", false)
+        state.Attributes["organization.0.name"] = organizationMap["name"].(string)
+        state.Attributes["organization.0.locked"] = fmt.Sprintf("%v", organizationMap["locked"].(bool))
+        state.Attributes["organization.0.private"] = fmt.Sprintf("%v", false)
     }
 	return state, nil
 }
