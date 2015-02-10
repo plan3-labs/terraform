@@ -128,8 +128,13 @@ func resourceHerokuAddonCreateInitialInstanceState(c *terraform.ResourceConfig, 
 
 	app, _ := c.Get("app")
 	plan, _ := c.Get("plan")
+
 	log.Printf("App is %s, plan is %s", app.(string), plan.(string))
-	addonName := strings.Split(plan.(string), ":")[0]
+	splitted := strings.Split(plan.(string), ":")
+	addonName := splitted[0]
+	if len(splitted) > 1 {
+		addonName += "-" + splitted[1]
+	}
 
 	addon, err := client.AddonInfo(app.(string), addonName)
 	if err != nil {
