@@ -373,19 +373,33 @@ func resourceHerokuAppCreateInitialInstanceState(config *terraform.ResourceConfi
 	client := meta.(*heroku.Service)
 
 	name, _ := config.Get("name")
-    organizationMapV, organizationApp := config.Get("organization")
-    _, err := resourceHerokuAppRetrieve(name.(string), organizationApp, client)
-    if err != nil {
-        return nil, err
-    }
-    state.ID = name.(string)
-    if organizationApp {
-        organizationMap := organizationMapV.([]map[string]interface{})[0]
-        state.Attributes["organization.#"] = "1"
-        state.Attributes["organization.0.name"] = organizationMap["name"].(string)
-        state.Attributes["organization.0.locked"] = fmt.Sprintf("%v", organizationMap["locked"].(bool))
-        state.Attributes["organization.0.private"] = fmt.Sprintf("%v", false)
-    }
+	organizationMapV, organizationApp := config.Get("organization")
+	app, err := resourceHerokuAppRetrieve(name.(string), organizationApp, client)
+	if err != nil {
+		return nil, err
+	}
+	state.ID = name.(string)
+	if organizationApp {
+		organizationMap := organizationMapV.([]map[string]interface{})[0]
+		state.Attributes["organization.#"] = "1"
+		state.Attributes["organization.0.name"] = organizationMap["name"].(string)
+		state.Attributes["organization.0.locked"] = fmt.Sprintf("%v", organizationMap["locked"].(bool))
+		state.Attributes["organization.0.private"] = fmt.Sprintf("%v", false)
+	}
+
+	state.Attributes["config_vars.#"] = "1"
+	count := 0
+	configArr, _ := config.Get("config_vars")
+	configVars := configArr.([]map[string]interface{})
+	for k, _ := range configVars[0] {
+		v, ok := app.Vars[k]
+		if ok {
+			state.Attributes["config_vars.0."+k] = v
+		}
+		count += 1
+	}
+	state.Attributes["config_vars.0.#"] = fmt.Sprintf("%d", count)
+
 	return state, nil
 }
 
