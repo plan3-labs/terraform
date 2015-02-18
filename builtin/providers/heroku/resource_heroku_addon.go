@@ -136,6 +136,7 @@ func resourceHerokuAddonCreateInitialInstanceState(c *terraform.ResourceConfig, 
 
 	app, _ := c.Get("app")
 	plan, _ := c.Get("plan")
+	config, _ := c.Get("config")
 
 	addons, err := client.AddonList(app.(string), nil)
 	if err != nil {
@@ -149,6 +150,19 @@ func resourceHerokuAddonCreateInitialInstanceState(c *terraform.ResourceConfig, 
 
 	state.ID = addon.ID
 	state.Attributes["app"] = app.(string)
+	if config != nil {
+		configMapsArr := config.([]map[string]interface{})
+		if len(configMapsArr) > 0 {
+			state.Attributes["config.#"] = "1"
+			count := 0
+			configMap := configMapsArr[0]
+			for k, v := range configMap {
+				state.Attributes["config.0."+k] = v.(string)
+				count += 1
+			}
+			state.Attributes["config.0.#"] = fmt.Sprintf("%d", count)
+		}
+	}
 
 	return state, nil
 }
