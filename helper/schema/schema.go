@@ -60,7 +60,7 @@ type Schema struct {
 	//
 	// If Required is true above, then Default cannot be set. DefaultFunc
 	// can be set with Required. If the DefaultFunc returns nil, then there
-	// will no default and the user will be asked to fill it in.
+	// will be no default and the user will be asked to fill it in.
 	//
 	// If either of these is set, then the user won't be asked for input
 	// for this key if the default is not nil.
@@ -661,10 +661,10 @@ func (m schemaMap) diffMap(
 
 	// Now we compare, preferring values from the config map
 	for k, v := range configMap {
-		old := stateMap[k]
+		old, ok := stateMap[k]
 		delete(stateMap, k)
 
-		if old == v && !all {
+		if old == v && ok && !all {
 			continue
 		}
 
@@ -702,6 +702,7 @@ func (m schemaMap) diffSet(
 		return nil
 	}
 
+	oRaw := o
 	if o == nil {
 		o = &Set{F: schema.Set}
 	}
@@ -750,7 +751,7 @@ func (m schemaMap) diffSet(
 
 	// If the counts are not the same, then record that diff
 	changed := oldLen != newLen
-	if changed || all {
+	if changed || all || oRaw == nil {
 		countSchema := &Schema{
 			Type:     TypeInt,
 			Computed: schema.Computed,
@@ -810,10 +811,14 @@ func (m schemaMap) diffString(
 		originalN = n
 		n = schema.StateFunc(n)
 	}
+	nraw := n
+	if nraw == nil {
+		nraw = schema.Type.Zero()
+	}
 	if err := mapstructure.WeakDecode(o, &os); err != nil {
 		return fmt.Errorf("%s: %s", k, err)
 	}
-	if err := mapstructure.WeakDecode(n, &ns); err != nil {
+	if err := mapstructure.WeakDecode(nraw, &ns); err != nil {
 		return fmt.Errorf("%s: %s", k, err)
 	}
 
@@ -1077,5 +1082,31 @@ func (m schemaMap) validateType(
 		return m.validateMap(k, raw, schema, c)
 	default:
 		return m.validatePrimitive(k, raw, schema, c)
+	}
+}
+
+// Zero returns the zero value for a type.
+func (t ValueType) Zero() interface{} {
+	switch t {
+	case TypeInvalid:
+		return nil
+	case TypeBool:
+		return false
+	case TypeInt:
+		return 0
+	case TypeFloat:
+		return 0.0
+	case TypeString:
+		return ""
+	case TypeList:
+		return []interface{}{}
+	case TypeMap:
+		return map[string]interface{}{}
+	case TypeSet:
+		return new(Set)
+	case typeObject:
+		return map[string]interface{}{}
+	default:
+		panic(fmt.Sprintf("unknown type %s", t))
 	}
 }

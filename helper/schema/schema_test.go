@@ -111,7 +111,7 @@ func TestValueType_Zero(t *testing.T) {
 		{TypeString, ""},
 		{TypeList, []interface{}{}},
 		{TypeMap, map[string]interface{}{}},
-		{TypeSet, nil},
+		{TypeSet, new(Set)},
 	}
 
 	for i, tc := range cases {
@@ -1942,6 +1942,158 @@ func TestSchemaMap_Diff(t *testing.T) {
 			},
 			Diff: nil,
 			Err:  false,
+		},
+
+		// #48 - Zero value in state shouldn't result in diff
+		{
+			Schema: map[string]*Schema{
+				"port": &Schema{
+					Type:     TypeBool,
+					Optional: true,
+					ForceNew: true,
+				},
+			},
+
+			State: &terraform.InstanceState{
+				Attributes: map[string]string{
+					"port": "false",
+				},
+			},
+
+			Config: map[string]interface{}{},
+
+			Diff: nil,
+
+			Err: false,
+		},
+
+		// #49 Set - Same as #47 but for sets
+		{
+			Schema: map[string]*Schema{
+				"route": &Schema{
+					Type:     TypeSet,
+					Optional: true,
+					Elem: &Resource{
+						Schema: map[string]*Schema{
+							"index": &Schema{
+								Type:     TypeInt,
+								Required: true,
+							},
+
+							"gateway": &Schema{
+								Type:     TypeSet,
+								Optional: true,
+								Elem:     &Schema{Type: TypeInt},
+								Set: func(a interface{}) int {
+									return a.(int)
+								},
+							},
+						},
+					},
+					Set: func(v interface{}) int {
+						m := v.(map[string]interface{})
+						return m["index"].(int)
+					},
+				},
+			},
+
+			State: &terraform.InstanceState{
+				Attributes: map[string]string{
+					"route.#": "0",
+				},
+			},
+
+			Config: map[string]interface{}{},
+
+			Diff: nil,
+
+			Err: false,
+		},
+
+		// #50 - A set computed element shouldn't cause a diff
+		{
+			Schema: map[string]*Schema{
+				"active": &Schema{
+					Type:     TypeBool,
+					Computed: true,
+					ForceNew: true,
+				},
+			},
+
+			State: &terraform.InstanceState{
+				Attributes: map[string]string{
+					"active": "true",
+				},
+			},
+
+			Config: map[string]interface{}{},
+
+			Diff: nil,
+
+			Err: false,
+		},
+
+		// #51 - An empty set should show up in the diff
+		{
+			Schema: map[string]*Schema{
+				"instances": &Schema{
+					Type:     TypeSet,
+					Elem:     &Schema{Type: TypeString},
+					Optional: true,
+					ForceNew: true,
+					Set: func(v interface{}) int {
+						return len(v.(string))
+					},
+				},
+			},
+
+			State: nil,
+
+			Config: map[string]interface{}{},
+
+			Diff: &terraform.InstanceDiff{
+				Attributes: map[string]*terraform.ResourceAttrDiff{
+					"instances.#": &terraform.ResourceAttrDiff{
+						Old:         "0",
+						New:         "0",
+						RequiresNew: true,
+					},
+				},
+			},
+
+			Err: false,
+		},
+
+		// #52 - Map with empty value
+		{
+			Schema: map[string]*Schema{
+				"vars": &Schema{
+					Type: TypeMap,
+				},
+			},
+
+			State: nil,
+
+			Config: map[string]interface{}{
+				"vars": map[string]interface{}{
+					"foo": "",
+				},
+			},
+
+			Diff: &terraform.InstanceDiff{
+				Attributes: map[string]*terraform.ResourceAttrDiff{
+					"vars.#": &terraform.ResourceAttrDiff{
+						Old: "0",
+						New: "1",
+					},
+					"vars.foo": &terraform.ResourceAttrDiff{
+						Old: "",
+						New: "",
+					},
+				},
+			},
+
+			Err: false,
 		},
 	}
 

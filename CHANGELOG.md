@@ -1,17 +1,13 @@
 ## 0.3.7 (unreleased)
 
-FEATURES:
-
-  * **New provider: `azure`** - initially just supporting Linux virtual
-      machines [GH-899]
-
 IMPROVEMENTS:
 
-  * **New resources: `google_compute_forwarding_rule`, `google_compute_http_health_check`, 
-      and `google_compute_target_pool`** - Together these provide network-level 
+  * **New resources: `google_compute_forwarding_rule`, `google_compute_http_health_check`,
+      and `google_compute_target_pool`** - Together these provide network-level
       load balancing. [GH-588]
-  * **New resource: `aws_main_route_table_association`** - Manage the main routing table 
+  * **New resource: `aws_main_route_table_association`** - Manage the main routing table
       of a VPC. [GH-918]
+  * **New resource: `aws_vpc_peering_connection`** [GH-963]
   * core: Formalized the syntax of interpolations and documented it
       very heavily.
   * core: Strings in interpolations can now contain further interpolations,
@@ -22,8 +18,13 @@ IMPROVEMENTS:
   * provider/aws: The `aws_db_instance` resource no longer requires both
       `final_snapshot_identifier` and `skip_final_snapshot`; the presence or
       absence of the former now implies the latter. [GH-874]
-  * provider/aws: Avoid unecessary update of `aws_subnet` when 
+  * provider/aws: Avoid unecessary update of `aws_subnet` when
       `map_public_ip_on_launch` is not specified in config. [GH-898]
+  * provider/aws: Add `apply_method` to `aws_db_parameter_group` [GH-897]
+  * provider/aws: Add `storage_type` to `aws_db_instance` [GH-896]
+  * provider/aws: ELB can update listeners without requiring new. [GH-721]
+  * provider/aws: Security group support egress rules. [GH-856]
+  * provider/aws: Route table supports VPC peering connection on route. [GH-963]
   * provider/google: Remove "client secrets file", as it's no longer necessary
       for API authentication [GH-884].
   * provider/google: Expose `self_link` on `google_compute_instance` [GH-906]
@@ -37,12 +38,29 @@ BUG FIXES:
   * core: Fix crash that could occur when there are exactly zero providers
       installed on a system. [GH-786]
   * core: JSON TF configurations can configure provisioners. [GH-807]
+  * core: Sort `depends_on` in state to prevent unnecessary file changes. [GH-928]
+  * core: State containing the zero value won't cause a diff with the
+      lack of a value. [GH-952]
+  * core: If a set type becomes empty, the state will be properly updated
+      to remove it. [GH-952]
+  * core: Bare "splat" variables are not allowed in provisioners. [GH-636]
   * command/apply: Won't try to initialize modules in some cases when
       no arguments are given. [GH-780]
   * command/apply: Fix regression where user variables weren't asked [GH-736]
+  * helper/hashcode: Update `hash.String()` to always return a positive index.
+      Fixes issue where specific strings would convert to a negative index
+      and be ommited when creating Route53 records. [GH-967]
   * provider/aws: ELB subnet change doesn't force new resource. [GH-804]
+  * provider/aws: Automatically suffix the Route53 zone name on record names. [GH-312]
   * provider/aws: Instance should ignore root EBS devices. [GH-877]
   * provider/aws: Fix `aws_db_instance` to not recreate each time. [GH-874]
+  * provider/aws: ASG termination policies are synced with remote state. [GH-923]
+  * provider/aws: ASG launch configuration setting can now be updated in-place. [GH-904]
+  * provider/aws: No read error when subnet is manually deleted. [GH-889]
+  * provider/aws: Tags with empty values (empty string) are properly
+      managed. [GH-968]
+  * provider/aws: Fix case where route table would delete its routes
+      on an unrelated change. [GH-990]
   * provider/google: Fix bug preventing instances with metadata from being
       created [GH-884].
 
@@ -52,6 +70,9 @@ PLUGIN CHANGES:
   * New `helper/schema` field for resources: `Exists` must point to a function
       to check for the existence of a resource. This is used to properly
       handle the case where the resource was manually deleted. [GH-766]
+  * There is a semantic change in `GetOk` where it will return `true` if
+      there is any value in the diff that is _non-zero_. Before, it would
+      return true only if there was a value in the diff.
 
 ## 0.3.6 (January 6, 2015)
 
