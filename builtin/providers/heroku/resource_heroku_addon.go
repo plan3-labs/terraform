@@ -123,22 +123,30 @@ func resourceHerokuAddonRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func findAddon(addons []*heroku.Addon, plan string) *heroku.Addon {
+	for i := range addons {
+		addon := addons[i]
+		if addon.Plan.Name == plan {
+			return addon
+		}
+	}
+	return nil
+}
+
 func resourceHerokuAddonCreateInitialInstanceState(c *terraform.ResourceConfig, state *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
 	client := meta.(*heroku.Service)
 
 	app, _ := c.Get("app")
 	plan, _ := c.Get("plan")
 
-	log.Printf("App is %s, plan is %s", app.(string), plan.(string))
-	splitted := strings.Split(plan.(string), ":")
-	addonName := splitted[0]
-	if len(splitted) > 1 {
-		addonName += "-" + splitted[1]
-	}
-
-	addon, err := client.AddonInfo(app.(string), addonName)
+	addons, err := client.AddonList(app.(string), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	addon := findAddon(addons, plan.(string))
+	if addon == nil {
+		return nil, fmt.Errorf("Couldn't find addon with plan %s", plan)
 	}
 
 	state.ID = addon.ID
