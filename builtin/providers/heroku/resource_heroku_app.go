@@ -369,6 +369,14 @@ func resourceHerokuAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	return resourceHerokuAppRead(d, meta)
 }
 
+func falseOnNil(val interface{}) bool {
+    if val == nil {
+        return false
+    }
+
+    return val.(bool)
+}
+
 func resourceHerokuAppCreateInitialInstanceState(config *terraform.ResourceConfig, state *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
 	client := meta.(*heroku.Service)
 
@@ -383,7 +391,7 @@ func resourceHerokuAppCreateInitialInstanceState(config *terraform.ResourceConfi
 		organizationMap := organizationMapV.([]map[string]interface{})[0]
 		state.Attributes["organization.#"] = "1"
 		state.Attributes["organization.0.name"] = organizationMap["name"].(string)
-		state.Attributes["organization.0.locked"] = fmt.Sprintf("%v", organizationMap["locked"].(bool))
+		state.Attributes["organization.0.locked"] = fmt.Sprintf("%v", falseOnNil(organizationMap["locked"]))
 		state.Attributes["organization.0.private"] = fmt.Sprintf("%v", false)
 	}
 
